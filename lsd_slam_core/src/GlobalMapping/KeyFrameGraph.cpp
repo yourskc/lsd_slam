@@ -65,17 +65,34 @@ KFConstraintStruct::~KFConstraintStruct()
 KeyFrameGraph::KeyFrameGraph()
 : nextEdgeId(0)
 {
+// skc
+// https://github.com/tum-vision/lsd_slam/issues/276
+// https://github.com/kevin-george/lsd_slam/blob/7f040edb95b4841e7bdf8dddeb0b5cf358000dde/lsd_slam_core/src/GlobalMapping/KeyFrameGraph.cpp#L68
+/*
 	typedef g2o::BlockSolver_7_3 BlockSolver;
 	typedef g2o::LinearSolverCSparse<BlockSolver::PoseMatrixType> LinearSolver;
 	//typedef g2o::LinearSolverPCG<BlockSolver::PoseMatrixType> LinearSolver;
 	LinearSolver* solver = new LinearSolver();
 	BlockSolver* blockSolver = new BlockSolver(solver);
-	g2o::OptimizationAlgorithmLevenberg* algorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
+	g2o::OptimizationAlgorithmLevenberg* algorithm = new g2o::OptimizationAlgorithmLevenberg(blockSolver
+);
+	graph.setAlgorithm(algorithm);
+
+*/
+	typedef g2o::BlockSolver< g2o::BlockSolverTraits<7,3> > BalBlockSolver;
+	typedef g2o::LinearSolverCSparse<BalBlockSolver::PoseMatrixType> BalLinearSolver;
+        std::unique_ptr<g2o::LinearSolver<BalBlockSolver::PoseMatrixType>> linearSolver;
+	//typedef g2o::LinearSolverPCG<BlockSolver::PoseMatrixType> LinearSolver;
+        auto cholesky = g2o::make_unique<BalLinearSolver>();
+        cholesky->setBlockOrdering(true);
+        linearSolver = std::move(cholesky);
+        g2o::OptimizationAlgorithmLevenberg* algorithm = new g2o::OptimizationAlgorithmLevenberg(
+            g2o::make_unique<BalBlockSolver>(std::move(linearSolver)));
 	graph.setAlgorithm(algorithm);
 	
     graph.setVerbose(false); // printOptimizationInfo
-	solver->setWriteDebug(true);
-	blockSolver->setWriteDebug(true);
+	//solver->setWriteDebug(true);
+	//blockSolver->setWriteDebug(true);
 	algorithm->setWriteDebug(true);
 
 
